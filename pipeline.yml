@@ -1,0 +1,12 @@
+steps:
+  - name: Build
+    command: echo "Building..."
+    env:
+      ENV: dev
+
+  - name: Test
+    command: exit 1
+    continueOnError: true
+
+  - name: Deploy
+    command: echo "Deploying..."

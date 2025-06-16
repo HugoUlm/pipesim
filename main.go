@@ -1,5 +1,8 @@
 package main
 
-func main() {
+import "github.com/HugoUlm/pipesim/cmd"
 
+func main() {
+	cmd.Execute()
 }
+
