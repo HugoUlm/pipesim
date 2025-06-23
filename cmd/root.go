@@ -9,7 +9,7 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "pipesim",
-	Short: "A local CI/CD pipeline simulator",
+	Short: "Your local CI/CD pipeline simulator",
 }
 
 func Execute() {

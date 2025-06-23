@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func Run(p *Pipeline, dryRun bool) {
+func Run(p *Pipeline, dryRun bool, project string) {
 	for _, step := range p.Steps {
 		fmt.Printf("▶ %s\n", step.Name)
 
@@ -16,7 +16,7 @@ func Run(p *Pipeline, dryRun bool) {
 			continue
 		}
 
-		cmd := exec.Command("bash", "-c", step.Command)
+		cmd := exec.Command("bash", "-c", fmt.Sprintf("%s %s", step.Command, project))
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
