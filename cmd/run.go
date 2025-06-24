@@ -5,35 +5,38 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/HugoUlm/pipesim/pipeline"
+	"github.com/HugoUlm/pipesim/internal/pipeline/parser"
+	"github.com/HugoUlm/pipesim/internal/pipeline/runner"
 )
 
 var (
-	file    string
-	dryRun  bool
-	project string
+	file		string
+	dryRun		bool
+	project		string
+	useCache	bool
 )
 
 func init() {
 	runCmd := &cobra.Command{
-		Use:   "run",
+		Use:   "pipesim",
 		Short: "Run a pipeline",
 		Run: func(cmd *cobra.Command, args []string) {
-			p, err := pipeline.Parse(file)
+			commands, err := parser.Parse(file, useCache, project)
 			if err != nil {
 				fmt.Println("❌ Failed to parse pipeline:", err)
 				os.Exit(1)
 			}
 
-			if len(p.Steps) == 0 {
+			if len(commands) == 0 {
 				fmt.Println("⚠️ No steps defined in pipeline.")
 				return
 			}
-			pipeline.Run(p, dryRun, project)
+			runner.Run(commands, dryRun, useCache)
 		},
 	}
 	runCmd.Flags().StringVarP(&file, "file", "f", "", "Path to your yml-file (required)")
 	runCmd.Flags().StringVarP(&project, "project", "p", "", "Path to your project")
+	runCmd.Flags().BoolVar(&useCache, "use-cache", false, "Remove downloaded packages after run")
 	runCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Print steps without executing")
 	runCmd.MarkFlagRequired("file")
 	rootCmd.AddCommand(runCmd)
