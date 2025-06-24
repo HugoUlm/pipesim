@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/HugoUlm/pipesim/internal/pipeline/parser"
-	"github.com/HugoUlm/pipesim/internal/pipeline/runner"
+	"github.com/HugoUlm/pipesim/internal/parser"
+	"github.com/HugoUlm/pipesim/internal/runner"
 )
 
 var (
