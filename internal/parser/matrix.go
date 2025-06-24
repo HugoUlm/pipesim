@@ -3,9 +3,11 @@ package parser
 import (
 	"fmt"
 	"strings"
+
+	"github.com/HugoUlm/pipesim/internal/types"
 )
 
-func ExpandMatrix(matrix map[string][]string) []map[string]string {
+func expandMatrix(matrix map[string][]string) []map[string]string {
     if len(matrix) == 0 {
         return []map[string]string{}
     }
@@ -39,8 +41,19 @@ func ExpandMatrix(matrix map[string][]string) []map[string]string {
     return recurse(0, make(map[string]string))
 }
 
+func resolveGoVersion(step types.Step, variant map[string]string) string {
+	raw := step.With["go-version"]
+	switch {
+	case raw == "":
+		return variant["go-version"]
+	case strings.Contains(raw, "${{"):
+		return substituteMatrixVars(raw, variant)
+	default:
+		return raw
+	}
+}
 
-func SubstituteMatrixVars(input string, matrix map[string]string) string {
+func substituteMatrixVars(input string, matrix map[string]string) string {
     for k, v := range matrix {
         placeholder := fmt.Sprintf("${{ matrix.%s }}", k)
         input = strings.ReplaceAll(input, placeholder, v)

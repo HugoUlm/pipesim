@@ -10,70 +10,84 @@ import (
 	"github.com/HugoUlm/pipesim/internal/types"
 )
 
+
 func Parse(filename string, useCache bool, project string) ([]types.Command, error) {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
+    data, err := os.ReadFile(filename)
+    if err != nil {
+        return nil, err
+    }
 
-	var workflow types.Workflow
-	if err := yaml.Unmarshal(data, &workflow); err != nil {
-		return nil, err
-	}
+    var workflow types.Workflow
+    if err := yaml.Unmarshal(data, &workflow); err != nil {
+        return nil, err
+    }
 
-	var commands []types.Command
-	for _, job := range workflow.Jobs {
-		matrixVariants := []map[string]string{{}}
-		if job.Strategy != nil && len(job.Strategy.Matrix) > 0 {
-		    matrixVariants = ExpandMatrix(job.Strategy.Matrix)
-		}
+    var commands []types.Command
 
-		for _, variant := range matrixVariants {
-		    for _, s := range job.Steps {
-		        name := SubstituteMatrixVars(s.Name, variant)
-		        cmd := SubstituteMatrixVars(s.Run, variant)
-		        uses := SubstituteMatrixVars(s.Uses, variant)
+    for _, job := range workflow.Jobs {
+        var variants []map[string]string
 
-		        switch {
-		        case cmd != "":
-		            commands = append(commands, types.Command{
-		                Name:    name,
-		                Cmd:     cmd,
-		                Env:     s.Env,
-		                Project: project,
-		            })
-		        case strings.Contains(uses, "actions/setup-"):
-					step.Name = substituteMatrixVars(step.Name, variant)
-					step.Uses = substituteMatrixVars(step.Uses, variant)
-					for k, v := range step.With {
-					    step.With[k] = substituteMatrixVars(v, variant)
-					}
-		            version := detectLanguageVersions(step)
-		            installCmd, _ := setup.InstallLanguage(version, useCache)
-		            commands = append(commands, types.Command{
-		                Name:     name,
-		                Cmd:      installCmd,
-		                Language: version.Language.String(),
-		            })
-		        case strings.HasPrefix(uses, "actions"):
-		            commands = append(commands, types.Command{
-		                Name: name,
-		                Cmd:  fmt.Sprintf(`echo "📦 simulating running %s"`, uses),
-		            })
-		        case uses != "":
-		            commands = append(commands, types.Command{
-		                Name: name,
-		                Cmd:  fmt.Sprintf(`echo "⚠️ Skipping unsupported action: %s"`, uses),
-		            })
-		        default:
-		            continue
-		        }
-		    }
-		    break // simulate only the first job for now
-		}
-	}
-	return commands, nil
+        if job.Strategy != nil && len(job.Strategy.Matrix) > 0 {
+            variants = expandMatrix(job.Strategy.Matrix)
+        } else {
+            variants = []map[string]string{{}} // single default variant
+        }
+
+        for _, variant := range variants {
+            for _, s := range job.Steps {
+                // Apply matrix substitution
+                s.Name = substituteMatrixVars(s.Name, variant)
+                s.Run = substituteMatrixVars(s.Run, variant)
+                s.Uses = substituteMatrixVars(s.Uses, variant)
+                for k, v := range s.With {
+                    s.With[k] = substituteMatrixVars(v, variant)
+                }
+
+                switch {
+                case s.Run != "":
+                    commands = append(commands, types.Command{
+                        Name:    s.Name,
+                        Cmd:     s.Run,
+                        Env:     s.Env,
+                        Project: project,
+                    })
+
+                case strings.Contains(s.Uses, "actions/setup-"):
+                    version := resolveGoVersion(s, variant)
+                    language := &types.LanguageSetup{
+                        Language: types.ParseLanguage(strings.TrimPrefix(strings.Split(s.Uses, "@")[0], "actions/setup-")),
+                        Version:  version,
+                    }
+                    cmd, _ := setup.InstallLanguage(language, useCache)
+
+                    commands = append(commands, types.Command{
+                        Name:     s.Name,
+                        Cmd:      cmd,
+                        Language: language.Language.String(),
+                    })
+
+                case strings.HasPrefix(s.Uses, "actions"):
+                    commands = append(commands, types.Command{
+                        Name: s.Name,
+                        Cmd:  fmt.Sprintf(`echo "📦 simulating running %s"`, s.Uses),
+                    })
+
+                case s.Uses != "":
+                    commands = append(commands, types.Command{
+                        Name: s.Name,
+                        Cmd:  fmt.Sprintf(`echo "⚠️ Skipping unsupported action: %s"`, s.Uses),
+                    })
+
+                default:
+                    continue
+                }
+            }
+        }
+    }
+
+    return commands, nil
 }
+
 
 func detectLanguageVersions(step types.Step) *types.LanguageSetup {
     lang := strings.TrimPrefix(strings.Split(step.Uses, "@")[0], "actions/setup-")
