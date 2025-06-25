@@ -45,11 +45,15 @@ func Parse(filename string, useCache bool, project string) ([]types.Command, err
 
                 switch {
                 case s.Run != "":
+					projectValue := ""
+					if stepRequiresProject(s) {
+						projectValue = project
+					}
                     commands = append(commands, types.Command{
                         Name:    s.Name,
                         Cmd:     s.Run,
                         Env:     s.Env,
-                        Project: project,
+                        Project: projectValue,
                     })
 
                 case strings.Contains(s.Uses, "actions/setup-"):
@@ -102,4 +106,9 @@ func detectLanguageVersions(step types.Step) *types.LanguageSetup {
     }
 
     return nil
+}
+
+func stepRequiresProject(step types.Step) bool {
+    run := strings.ToLower(step.Run)
+    return strings.Contains(run, "build") || strings.Contains(run, "test")
 }
