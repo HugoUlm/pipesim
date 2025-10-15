@@ -32,4 +32,4 @@ go build -o pipesim
 Feel free to open issues or submit pull requests to improve functionality or add new pipeline simulation features.
 
 ## 📄 License
-This project is licensed under the MIT License. See the LICENSE file for details.
+This project is licensed under the MIT License. See the [LICENSE](https://github.com/HugoUlm/pipesim/blob/main/LICENSE) file for details.
